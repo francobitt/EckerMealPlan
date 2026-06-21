@@ -194,10 +194,13 @@ function buildMeal(mealKey,phase,avail){
   if(r.protFix&&avail[r.protFix]){items.push({key:r.protFix,qty:3,cat:"protein"});pS+=FOODS[r.protFix].p*3;cS+=FOODS[r.protFix].c*3;}
   if(r.milk&&avail.milk){items.push({key:"milk",qty:FIX.milk,cat:"carb"});pS+=FOODS.milk.p*FIX.milk;cS+=FOODS.milk.c*FIX.milk;}
   if(r.fruit){const fk=firstAvail(r.fruit,avail);if(fk){items.push({key:fk,qty:FIX.fruitTopper,cat:"fruit"});pS+=FOODS[fk].p*FIX.fruitTopper;cS+=FOODS[fk].c*FIX.fruitTopper;}}
-  const pk=firstAvail(r.protFill,avail);
-  if(pk){const q=roundTo(Math.max(0,t.p-pS)/FOODS[pk].p,FOODS[pk].step);if(q>0){items.push({key:pk,qty:q,cat:"protein"});cS+=FOODS[pk].c*q;}}
+  let carbItem=null;
   const ck=firstAvail(r.carb,avail);
-  if(ck){const q=roundTo(Math.max(0,t.c-cS)/FOODS[ck].c,FOODS[ck].step);if(q>0)items.push({key:ck,qty:q,cat:"carb"});}
+  if(ck){const q=roundTo(Math.max(0,t.c-cS)/FOODS[ck].c,FOODS[ck].step);if(q>0){carbItem={key:ck,qty:q,cat:"carb"};cS+=FOODS[ck].c*q;}}
+  const carbProt=(phase==="bulk"&&carbItem)?FOODS[carbItem.key].p*carbItem.qty:0;
+  const pk=firstAvail(r.protFill,avail);
+  if(pk){const q=roundTo(Math.max(0,t.p-pS-carbProt)/FOODS[pk].p,FOODS[pk].step);if(q>0)items.push({key:pk,qty:q,cat:"protein"});}
+  if(carbItem)items.push(carbItem);
   return items;
 }
 
