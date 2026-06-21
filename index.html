@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#15170F">
+<title>General Meal Plan</title>
+<style>
+  :root{
+    --bg:#15170F; --surface:#1E2118; --surface2:#262A1D;
+    --border:#373C29; --borderLit:#4A5135;
+    --text:#E9E5D6; --muted:#9A9C86; --faint:#6B6E5A;
+    --signal:#F2B441; --protein:#CE6B49; --carb:#E0A82E; --fat:#88A65A;
+    --fit-green:#84A65A; --fit-yellow:#E0B341; --fit-orange:#D98036;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:'DejaVu Sans',system-ui,-apple-system,sans-serif;
+    padding:20px 16px calc(48px + env(safe-area-inset-bottom));
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:980px;margin:0 auto}
+  h1{margin:0 0 6px;font-size:13px;letter-spacing:.32em;text-transform:uppercase;color:var(--signal);font-weight:700}
+  .intro{margin:0 0 12px;font-size:13px;color:var(--muted);line-height:1.5;max-width:520px}
+  .legendrow{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 18px;font-size:11.5px;color:var(--muted)}
+  .legend{display:flex;align-items:center;gap:10px}
+  .legend .item{display:flex;align-items:center;gap:4px}
+  .dot{width:8px;height:8px;border-radius:50%}
+  .lbl{color:var(--faint)}
+  .phases{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .phase{flex:1 1 150px;text-align:left;padding:12px 14px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--text);cursor:pointer;transition:all .1s ease;font:inherit}
+  .phase:active{transform:scale(.98)}
+  .phase.on{background:var(--surface2);border-color:var(--signal)}
+  .phase .name{font-size:13px;font-weight:700}
+  .phase.on .name{color:var(--signal)}
+  .bar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+  .bar .top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+  .kcal{font-size:30px;font-weight:800;font-family:'DejaVu Sans Mono',ui-monospace,monospace}
+  .kcalt{font-size:13px;color:var(--muted);margin-left:6px}
+  .status{font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+  .track{height:4px;background:var(--surface2);border-radius:3px;margin-bottom:16px;overflow:hidden}
+  .track>div{height:100%;background:var(--signal);transition:width .25s ease}
+  .macros{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .macro .mtop{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+  .macro .mlbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .macro .mval{font-size:12px;font-family:'DejaVu Sans Mono',ui-monospace,monospace}
+  .mtrack{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+  .mtrack>div{height:100%;transition:width .25s ease}
+  .cols{display:grid;grid-template-columns:260px 1fr;gap:16px;margin-top:16px;align-items:start}
+  .loadout{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 14px 16px}
+  .lo-title{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--signal);font-weight:700;margin-bottom:12px}
+  .lo-group{margin-bottom:14px}
+  .lo-glabel{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:7px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-size:11.5px;padding:5px 9px;border-radius:6px;background:var(--surface2);border:1px solid var(--borderLit);color:var(--text);cursor:pointer;font:inherit;transition:border-color .12s ease}
+  .chip:hover{border-color:var(--signal)}
+  .chip.off{background:transparent;border-color:var(--border);color:var(--faint);text-decoration:line-through;opacity:.6}
+  .meals{display:flex;flex-direction:column;gap:12px}
+  .meal{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .meal .mhead{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+  .meal .mname{font-size:14px;font-weight:700}
+  .meal .mwin{font-size:11px;color:var(--faint);letter-spacing:.05em}
+  .empty{font-size:12px;color:var(--faint);padding:6px 0 10px}
+  .items{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+  .item{display:flex;align-items:center;gap:10px}
+  .fit{width:4px;height:22px;border-radius:2px;flex-shrink:0}
+  .qty{min-width:70px;font-size:13px;font-weight:700;font-family:'DejaVu Sans Mono',ui-monospace,monospace}
+  .fname{font-size:13px;color:var(--text);flex:1;cursor:pointer;transition:color .12s ease;background:none;border:none;text-align:left;font:inherit;padding:0}
+  .fname:hover{color:var(--signal)}
+  .ical{font-size:11px;color:var(--faint);font-family:'DejaVu Sans Mono',ui-monospace,monospace}
+  .mfoot{display:flex;gap:16px;border-top:1px solid var(--border);padding-top:9px}
+  .mini{font-size:11.5px;font-family:'DejaVu Sans Mono',ui-monospace,monospace}
+  .mini b{font-weight:700}
+  .faintc{color:var(--faint)}
+  button:focus-visible,.chip:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+  @media(max-width:760px){.cols{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>General Meal Plan</h1>
+  <p class="intro">Select everything available today for a meal suggestion.</p>
+  <div class="legendrow">
+    <span>Tap a food to swap it for a near macro-equivalent.</span>
+    <span class="legend">
+      <span class="item"><span class="dot" style="background:var(--fit-green)"></span><span class="lbl">Best</span></span>
+      <span class="item"><span class="dot" style="background:var(--fit-yellow)"></span><span class="lbl">OK</span></span>
+      <span class="item"><span class="dot" style="background:var(--fit-orange)"></span><span class="lbl">Stretch</span></span>
+    </span>
+  </div>
+  <div class="phases" id="phases"></div>
+  <div id="dailybar"></div>
+  <div class="cols">
+    <div class="loadout">
+      <div class="lo-title">Today's loadout</div>
+      <div id="loadout"></div>
+    </div>
+    <div class="meals" id="meals"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// macros per 1 unit (per g, per ml, or per egg)
+const FOODS = {
+  whole_egg:  {name:"Whole eggs",      unit:"egg",kcal:72,   p:6,    c:0.5,  f:5,    step:1, grp:"protein"},
+  egg_white:  {name:"Egg whites",      unit:"g",  kcal:0.52, p:0.109,c:0.007,f:0.002,step:25,grp:"protein"},
+  chicken:    {name:"Chicken breast",  unit:"g",  kcal:1.65, p:0.31, c:0,    f:0.036,step:25,grp:"protein"},
+  fish:       {name:"Mahi / whitefish",unit:"g",  kcal:1.09, p:0.237,c:0,    f:0.009,step:25,grp:"protein"},
+  shrimp:     {name:"Shrimp",          unit:"g",  kcal:0.99, p:0.24, c:0.002,f:0.003,step:25,grp:"protein"},
+  steak:      {name:"Sirloin steak",   unit:"g",  kcal:2.10, p:0.29, c:0,    f:0.10, step:25,grp:"protein"},
+  yogurt:     {name:"Triple Zero",     unit:"g",  kcal:0.60, p:0.10, c:0.047,f:0,    step:25,grp:"protein"},
+  rice:       {name:"White rice",      unit:"g",  kcal:1.30, p:0.027,c:0.28, f:0.003,step:25,grp:"carb"},
+  cornflakes: {name:"Corn flakes",     unit:"g",  kcal:3.57, p:0.07, c:0.84, f:0.004,step:10,grp:"carb"},
+  specialk:   {name:"Special K",       unit:"g",  kcal:3.77, p:0.178,c:0.73, f:0.018,step:10,grp:"carb"},
+  milk:       {name:"1% milk",         unit:"ml", kcal:0.42, p:0.034,c:0.05, f:0.01, step:50,grp:"carb"},
+  banana:     {name:"Banana",          unit:"g",  kcal:0.89, p:0.011,c:0.23, f:0.003,step:25,grp:"fruit"},
+  berries:    {name:"Mixed berries",   unit:"g",  kcal:0.50, p:0.01, c:0.12, f:0.004,step:25,grp:"fruit"},
+  cantaloupe: {name:"Cantaloupe",      unit:"g",  kcal:0.34, p:0.008,c:0.08, f:0.002,step:25,grp:"fruit"},
+  cherries:   {name:"Cherries",        unit:"g",  kcal:0.63, p:0.011,c:0.16, f:0.002,step:25,grp:"fruit"},
+  watermelon: {name:"Watermelon",      unit:"g",  kcal:0.30, p:0.006,c:0.08, f:0.0015,step:25,grp:"fruit"},
+  grapes:     {name:"Grapes",          unit:"g",  kcal:0.69, p:0.007,c:0.18, f:0.002,step:25,grp:"fruit"},
+  pb:         {name:"Peanut butter",   unit:"g",  kcal:5.88, p:0.25, c:0.20, f:0.50, step:5, grp:"fat"},
+};
+
+const LOADOUT_GROUPS = [
+  {label:"Protein", keys:["whole_egg","egg_white","chicken","fish","shrimp","steak","yogurt"]},
+  {label:"Dense carbs", keys:["rice","cornflakes","specialk","milk"]},
+  {label:"Fruit", keys:["banana","berries","cantaloupe","cherries","watermelon","grapes"]},
+  {label:"Fat lever", keys:["pb"]},
+];
+
+const PHASES = {
+  cut:      {label:"Mini-cut → 170", kcal:2600, p:190, c:325, f:60},
+  maintain: {label:"Maintenance",    kcal:3000, p:180, c:415, f:70},
+  bulk:     {label:"Lean bulk",      kcal:3400, p:180, c:490, f:80},
+};
+
+const MEAL_TARGETS = {
+  cut:{breakfast:{p:50,c:60,f:14},lunch:{p:65,c:115,f:8},pre:{p:0,c:25,f:0},dinner:{p:65,c:125,f:18},flex:{p:0,c:0,f:14}},
+  maintain:{breakfast:{p:45,c:80,f:16},lunch:{p:60,c:145,f:9},pre:{p:2,c:35,f:0},dinner:{p:60,c:155,f:24},flex:{p:0,c:0,f:21}},
+  bulk:{breakfast:{p:45,c:90,f:18},lunch:{p:60,c:180,f:10},pre:{p:2,c:40,f:0},dinner:{p:60,c:180,f:28},flex:{p:0,c:0,f:24}},
+};
+
+const MEALS = [
+  {key:"breakfast",name:"Breakfast",window:"06:00–08:00"},
+  {key:"lunch",name:"Lunch",window:"11:00–13:30"},
+  {key:"pre",name:"Pre-lift",window:"before training"},
+  {key:"dinner",name:"Dinner",window:"17:00–19:50"},
+  {key:"flex",name:"Flex / evening",window:"as needed"},
+];
+
+const RECIPES = {
+  breakfast:{protFix:"whole_egg",protFill:["egg_white","yogurt"],carb:["specialk","cornflakes","rice"],milk:true,fruit:["berries","cantaloupe","watermelon","grapes"]},
+  lunch:{protFill:["chicken","fish","shrimp","steak"],carb:["rice","specialk","cornflakes"],fruit:["banana","grapes","cherries","berries"]},
+  pre:{carbWhole:["banana","grapes","cherries"]},
+  dinner:{protFill:["steak","fish","shrimp","chicken"],carb:["rice","cornflakes","specialk"],fruit:["cantaloupe","cherries","watermelon","berries","grapes"]},
+  flex:{fat:["pb"]},
+};
+
+const FIX = {milk:200, fruitTopper:150};
+const FIT = {green:"var(--fit-green)",yellow:"var(--fit-yellow)",orange:"var(--fit-orange)"};
+
+const roundTo=(v,s)=>Math.max(0,Math.round(v/s)*s);
+const firstAvail=(keys,avail)=>keys.find(k=>avail[k]);
+const dominant=g=>g==="protein"?"p":g==="fat"?"f":"c";
+const macsOf=items=>items.reduce((a,it)=>{const f=FOODS[it.key];a.p+=f.p*it.qty;a.c+=f.c*it.qty;a.f+=f.f*it.qty;a.kcal+=f.kcal*it.qty;return a;},{p:0,c:0,f:0,kcal:0});
+
+function fitLevel(mealKey,it,avail){
+  const r=RECIPES[mealKey];
+  if(mealKey==="breakfast"&&it.key===r.protFix)return"green";
+  if(mealKey==="breakfast"&&it.key==="milk")return"green";
+  if(it.cat==="fat")return"green";
+  const pool=mealKey==="pre"?r.carbWhole:it.cat==="protein"?r.protFill:it.cat==="carb"?r.carb:it.cat==="fruit"?r.fruit:null;
+  if(!pool)return"green";
+  const idx=pool.filter(k=>avail[k]).indexOf(it.key);
+  return idx===-1?"orange":idx===0?"green":idx===1?"yellow":"orange";
+}
+
+function buildMeal(mealKey,phase,avail){
+  const t=MEAL_TARGETS[phase][mealKey], r=RECIPES[mealKey], items=[];
+  if(mealKey==="pre"){
+    const fk=firstAvail(r.carbWhole,avail);
+    if(fk)items.push({key:fk,qty:roundTo(t.c/FOODS[fk].c,FOODS[fk].step),cat:"fruit"});
+    return items;
+  }
+  if(mealKey==="flex")return [];
+  let pS=0,cS=0;
+  if(r.protFix&&avail[r.protFix]){items.push({key:r.protFix,qty:3,cat:"protein"});pS+=FOODS[r.protFix].p*3;cS+=FOODS[r.protFix].c*3;}
+  if(r.milk&&avail.milk){items.push({key:"milk",qty:FIX.milk,cat:"carb"});pS+=FOODS.milk.p*FIX.milk;cS+=FOODS.milk.c*FIX.milk;}
+  if(r.fruit){const fk=firstAvail(r.fruit,avail);if(fk){items.push({key:fk,qty:FIX.fruitTopper,cat:"fruit"});pS+=FOODS[fk].p*FIX.fruitTopper;cS+=FOODS[fk].c*FIX.fruitTopper;}}
+  const pk=firstAvail(r.protFill,avail);
+  if(pk){const q=roundTo(Math.max(0,t.p-pS)/FOODS[pk].p,FOODS[pk].step);if(q>0){items.push({key:pk,qty:q,cat:"protein"});cS+=FOODS[pk].c*q;}}
+  const ck=firstAvail(r.carb,avail);
+  if(ck){const q=roundTo(Math.max(0,t.c-cS)/FOODS[ck].c,FOODS[ck].step);if(q>0)items.push({key:ck,qty:q,cat:"carb"});}
+  return items;
+}
+
+function buildDay(phase,avail){
+  const day={};
+  MEALS.forEach(m=>{day[m.key]=buildMeal(m.key,phase,avail);});
+  if(avail.pb){
+    let fatNoPb=0;
+    Object.values(day).forEach(items=>items.forEach(it=>{if(it.key!=="pb")fatNoPb+=FOODS[it.key].f*it.qty;}));
+    const gap=Math.max(0,PHASES[phase].f-fatNoPb);
+    const q=roundTo(gap/FOODS.pb.f,FOODS.pb.step);
+    day.flex=q>0?[{key:"pb",qty:q,cat:"fat"}]:[];
+  }
+  return day;
+}
+
+function statusOf(cur,tgt){
+  if(tgt===0)return cur<=2?"on":"over";
+  const r=cur/tgt;
+  if(r>=0.94&&r<=1.08)return"on";
+  if(r>=0.82&&r<=1.15)return"near";
+  return r<1?"low":"over";
+}
+const STATUS_COLOR={on:"#88A65A",near:"var(--signal)",low:"#C98A3A",over:"#CE6B49"};
+const MACRO_COLOR={p:"var(--protein)",c:"var(--carb)",f:"var(--fat)"};
+
+// ---------- state ----------
+const DEFAULT_AVAIL={}; Object.keys(FOODS).forEach(k=>DEFAULT_AVAIL[k]=true); DEFAULT_AVAIL.rice=false;
+let state={phase:"cut", avail:{...DEFAULT_AVAIL}, day:null};
+state.day=buildDay(state.phase,state.avail);
+
+function rebuild(){state.day=buildDay(state.phase,state.avail);render();}
+
+function setPhase(p){state.phase=p;rebuild();}
+function toggleAvail(k){state.avail[k]=!state.avail[k];rebuild();}
+function swapFood(mealKey,idx){
+  const it=state.day[mealKey][idx];
+  const grp=FOODS[it.key].grp;
+  const pool=Object.keys(FOODS).filter(k=>FOODS[k].grp===grp&&state.avail[k]);
+  if(pool.length<2)return;
+  const nextKey=pool[(pool.indexOf(it.key)+1)%pool.length];
+  const mac=dominant(grp);
+  const contribution=FOODS[it.key][mac]*it.qty;
+  const newQty=FOODS[nextKey][mac]>0?roundTo(contribution/FOODS[nextKey][mac],FOODS[nextKey].step):it.qty;
+  state.day[mealKey][idx]={...it,key:nextKey,qty:Math.max(FOODS[nextKey].step,newQty)};
+  render();
+}
+
+// ---------- render ----------
+const el=(t,c,txt)=>{const e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;};
+
+function renderPhases(){
+  const root=document.getElementById("phases");root.innerHTML="";
+  Object.entries(PHASES).forEach(([k,v])=>{
+    const b=el("button","phase"+(state.phase===k?" on":""));
+    b.appendChild(el("div","name",v.label));
+    b.onclick=()=>setPhase(k);
+    root.appendChild(b);
+  });
+}
+
+function renderDailyBar(){
+  const root=document.getElementById("dailybar");root.innerHTML="";
+  const m=macsOf(Object.values(state.day).flat());
+  const t=PHASES[state.phase];
+  const bar=el("div","bar");
+  const top=el("div","top");
+  const left=el("div");
+  const kc=el("span","kcal",String(Math.round(m.kcal)));
+  const kct=el("span","kcalt","/ "+t.kcal+" kcal");
+  left.appendChild(kc);left.appendChild(kct);
+  const st=statusOf(m.kcal,t.kcal);
+  const sts=el("span","status",st==="on"?"on target":st);
+  sts.style.color=STATUS_COLOR[st];
+  top.appendChild(left);top.appendChild(sts);
+  bar.appendChild(top);
+  const track=el("div","track");const tin=el("div");tin.style.width=Math.min(100,m.kcal/t.kcal*100)+"%";track.appendChild(tin);bar.appendChild(track);
+  const macros=el("div","macros");
+  [["Protein","p"],["Carbs","c"],["Fat","f"]].forEach(([lbl,key])=>{
+    const cur=m[key],tgt=t[key],s=statusOf(cur,tgt);
+    const mc=el("div","macro");
+    const mtop=el("div","mtop");
+    mtop.appendChild(el("span","mlbl",lbl));
+    const v=el("span","mval");v.style.color=STATUS_COLOR[s];
+    v.appendChild(document.createTextNode(Math.round(cur)));
+    const sub=el("span","faintc","/"+tgt+"g");v.appendChild(sub);
+    mtop.appendChild(v);mc.appendChild(mtop);
+    const mt=el("div","mtrack");const mi=el("div");mi.style.width=Math.min(100,cur/tgt*100)+"%";mi.style.background=MACRO_COLOR[key];mt.appendChild(mi);mc.appendChild(mt);
+    macros.appendChild(mc);
+  });
+  bar.appendChild(macros);
+  root.appendChild(bar);
+}
+
+function renderLoadout(){
+  const root=document.getElementById("loadout");root.innerHTML="";
+  LOADOUT_GROUPS.forEach(g=>{
+    const grp=el("div","lo-group");
+    grp.appendChild(el("div","lo-glabel",g.label));
+    const chips=el("div","chips");
+    g.keys.forEach(k=>{
+      const on=state.avail[k];
+      const c=el("button","chip"+(on?"":" off"),FOODS[k].name);
+      c.onclick=()=>toggleAvail(k);
+      chips.appendChild(c);
+    });
+    grp.appendChild(chips);root.appendChild(grp);
+  });
+}
+
+function renderMeals(){
+  const root=document.getElementById("meals");root.innerHTML="";
+  MEALS.forEach(meal=>{
+    const items=state.day[meal.key];
+    const target=MEAL_TARGETS[state.phase][meal.key];
+    const m=macsOf(items);
+    const card=el("div","meal");
+    const head=el("div","mhead");
+    head.appendChild(el("span","mname",meal.name));
+    head.appendChild(el("span","mwin",meal.window));
+    card.appendChild(head);
+    if(items.length===0){
+      card.appendChild(el("div","empty",meal.key==="flex"?"Covered by other meals.":"Nothing available."));
+    }else{
+      const list=el("div","items");
+      items.forEach((it,i)=>{
+        const f=FOODS[it.key];
+        const row=el("div","item");
+        const fit=el("div","fit");fit.style.background=FIT[fitLevel(meal.key,it,state.avail)];row.appendChild(fit);
+        const plural=(f.unit==="egg"&&it.qty!==1)?"s":"";
+        row.appendChild(el("span","qty",it.qty+" "+f.unit+plural));
+        const name=el("button","fname",f.name);name.onclick=()=>swapFood(meal.key,i);row.appendChild(name);
+        row.appendChild(el("span","ical",String(Math.round(f.kcal*it.qty))));
+        list.appendChild(row);
+      });
+      card.appendChild(list);
+      const foot=el("div","mfoot");
+      [["P","p","var(--protein)"],["C","c","var(--carb)"],["F","f","var(--fat)"]].forEach(([lbl,key,col])=>{
+        const s=statusOf(m[key],target[key]);
+        const sp=el("span","mini");
+        const b=el("b",null,lbl);b.style.color=col;sp.appendChild(b);
+        sp.appendChild(document.createTextNode(" "));
+        const cv=el("span",null,String(Math.round(m[key])));cv.style.color=STATUS_COLOR[s];sp.appendChild(cv);
+        sp.appendChild(el("span","faintc","/"+target[key]));
+        foot.appendChild(sp);
+      });
+      const kc=el("span","mini faintc",Math.round(m.kcal)+" kcal");kc.style.marginLeft="auto";
+      foot.appendChild(kc);
+      card.appendChild(foot);
+    }
+    root.appendChild(card);
+  });
+}
+
+function render(){renderPhases();renderDailyBar();renderLoadout();renderMeals();}
+render();
+</script>
+</body>
+</html>
